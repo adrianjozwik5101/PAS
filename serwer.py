@@ -8,24 +8,22 @@ def send(client, file_name):
     path_file = "serwer/rozpakowane/" + file_name
     size = os.stat(path_file).st_size
 
-    client.sendall(("SEND: \r\nNAME: " + file_name + "\r\nSIZE: " + str(size) + "\r\n\r\n").encode())
+    client.sendall(("SEND: \r\nNAME: " + file_name + "\r\nSIZE: " + str(size) + "\r\n\r\n").encode()) #dane pliku
 
     data = b''
-    while not b'\r\n\r\n' in data:
+    while not b'\r\n\r\n' in data:      #gotowosc do odbioru przez klienta
         data += client.recv(SIZE)
 
-    print(data)
 
     if data.split()[0] == b'OKSEDN':
 
         size_send= 0
 
         with open(path_file, 'rb') as file:
-            while size > size_send :
+            while size > size_send :        #wysylanie pliku
                 data = file.read(SIZE)
                 client.sendall(data)
                 size_send+=len(data)
-                #print('Sent ' + repr(data))
                 print(str(size_send)+"/"+str(size))
 
             file.close()
@@ -38,7 +36,7 @@ def send(client, file_name):
             data += client.recv(SIZE)
 
         serwer_recv = int(((data.split(b'RECEIVED:')[1]).split(b'\r\n')[0]).decode())
-        if serwer_recv == size:
+        if serwer_recv == size:             #sprawdzenie czy caly plik zostal przeslany
             print("Dane zostały poprawnie wysłane")
 
 
@@ -47,7 +45,7 @@ def send(client, file_name):
 def recv():
 
     data = b''
-    while not b'\r\n\r\n' in data:
+    while not b'\r\n\r\n' in data:      #inforamcje o pliku
         data += client.recv(SIZE)
 
     size = int((data.split(b'SIZE:')[1]).split(b'\r\n')[0])
@@ -58,7 +56,7 @@ def recv():
     data=b''
     content_lenght = 0
     with open('serwer/' + file_name, 'wb') as f:
-        while content_lenght < size:
+        while content_lenght < size:            #pobieranie pliku
             data = client.recv(SIZE)
             content_lenght += len(data)
             f.write(data)
@@ -66,12 +64,12 @@ def recv():
 
     f.close()
 
-    client.sendall(("RECEIVED: " + str(content_lenght)+"\r\n\r\n").encode())
+    client.sendall(("RECEIVED: " + str(content_lenght)+"\r\n\r\n").encode())  #informacja o ilosci pobranych bajtow
 
     return file_name
 
 def unzip(file_name):
-    with zipfile.ZipFile("serwer/"+file_name, 'r') as zip_ref:
+    with zipfile.ZipFile("serwer/"+file_name, 'r') as zip_ref:      #rozpakowanie pobranego pliku .ZIP
         zip_ref.extractall("serwer/rozpakowane")
 
     print("Nowe pliki:")
@@ -101,33 +99,30 @@ while True:
         while not b'\r\n\r\n' in data:
             data += client.recv(SIZE)
 
-        if data.split()[0]==b'SENDZIP':
+        if data.split()[0]==b'SENDZIP':     #klient chce przesylac
             client.sendall("OKSEDN\r\n\r\n".encode())
 
             file_name = recv()
             unzip(file_name)
 
-        if data.split()[0] == b'RECVFILE':
+        if data.split()[0] == b'RECVFILE':      #klient chce pobrac plik
             list_file = os.listdir('serwer/rozpakowane')
             list = ''
             for file in list_file:
                 list+=file+' '
 
-            client.sendall((list+"\r\n\r\n").encode())
+            client.sendall((list+"\r\n\r\n").encode())  #przeslanie listy dostepnych plikow
 
             data = b''
-            while not b'\r\n\r\n' in data:
+            while not b'\r\n\r\n' in data:          #odebranie nazwy pliku
                 data += client.recv(SIZE)
 
             file_name = data.decode()
             file_name=file_name[:-4]
             print(file_name)
             if list_file.count(file_name):
-                print("a")
                 send(client,file_name)
-                print(list_file.count(file_name))
 
 
     except:
         print("ERROR")
-
